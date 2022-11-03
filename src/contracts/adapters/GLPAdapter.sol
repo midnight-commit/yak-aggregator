@@ -24,7 +24,6 @@ import "../interface/IGmxRewardRouter.sol";
 import "../interface/IERC20.sol";
 import "../lib/SafeERC20.sol";
 import "../YakAdapter.sol";
-import "hardhat/console.sol";
 
 contract GLPAdapter is YakAdapter {
     using SafeERC20 for IERC20;
@@ -101,14 +100,12 @@ contract GLPAdapter is YakAdapter {
         address _tokenOut,
         address _to
     ) internal override {
-        uint256 amount;
         if (_tokenOut == fsGLP) {
             IERC20(_tokenIn).approve(glpManager, _amountIn);
-            amount = IGmxRewardRouter(rewardRouter).mintAndStakeGlp(_tokenIn, _amountIn, 0, _amountOut);
-            console.log("Bought: %s fsGLP", amount);
+            uint256 amount = IGmxRewardRouter(rewardRouter).mintAndStakeGlp(_tokenIn, _amountIn, 0, _amountOut);
             _returnTo(_tokenOut, amount, _to);
         } else {
-            amount = IGmxRewardRouter(rewardRouter).unstakeAndRedeemGlp(_tokenOut, _amountIn, _amountOut, _to);
+            IGmxRewardRouter(rewardRouter).unstakeAndRedeemGlp(_tokenOut, _amountIn, _amountOut, _to);
         }
     }
 }
