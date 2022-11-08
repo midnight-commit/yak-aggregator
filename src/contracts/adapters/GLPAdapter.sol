@@ -30,6 +30,7 @@ contract GLPAdapter is YakAdapter {
 
     address internal constant GLP = 0x01234181085565ed162a948b6a5e88758CD7c7b8;
     address internal constant fsGLP = 0x9e295B5B976a184B14aD8cd72413aD846C299660;
+    address internal constant sGLP = 0x0b82a1aD2138E9f62454ac41b702B64e0b73d57b;
 
     uint256 public constant BASIS_POINTS_DIVISOR = 1e4;
     uint256 public constant PRICE_PRECISION = 1e30;
@@ -59,7 +60,7 @@ contract GLPAdapter is YakAdapter {
         address _tokenIn,
         address _tokenOut
     ) internal view override returns (uint256 amountOut) {
-        return (_tokenOut == fsGLP) ? _quoteBuyGLP(_tokenIn, _amountIn) : _quoteSellGLP(_tokenOut, _amountIn);
+        return (_tokenOut == sGLP) ? _quoteBuyGLP(_tokenIn, _amountIn) : _quoteSellGLP(_tokenOut, _amountIn);
     }
 
     function _quoteBuyGLP(address _tokenIn, uint256 _amountIn) internal view returns (uint256 amountOut) {
@@ -99,13 +100,27 @@ contract GLPAdapter is YakAdapter {
         address _tokenIn,
         address _tokenOut,
         address _to
-    ) internal override {
-        if (_tokenOut == fsGLP) {
-            IERC20(_tokenIn).approve(glpManager, _amountIn);
-            uint256 amount = IGmxRewardRouter(rewardRouter).mintAndStakeGlp(_tokenIn, _amountIn, 0, _amountOut);
-            _returnTo(_tokenOut, amount, _to);
+    ) internal override {}
+
+    function swap(
+        uint256 _amountIn,
+        uint256 _amountOut,
+        address _fromToken,
+        address _toToken,
+        address _to
+    ) external override {
+        address toToken = _toToken == sGLP ? fsGLP : _toToken;
+        uint256 toBalanceBefore = IERC20(toToken).balanceOf(_to);
+        if (_toToken == sGLP) {
+            IERC20(_fromToken).approve(glpManager, _amountIn);
+            uint256 amount = IGmxRewardRouter(rewardRouter).mintAndStakeGlp(_fromToken, _amountIn, 0, _amountOut);
+            _returnTo(sGLP, amount, _to);
         } else {
-            IGmxRewardRouter(rewardRouter).unstakeAndRedeemGlp(_tokenOut, _amountIn, _amountOut, _to);
+            IGmxRewardRouter(rewardRouter).unstakeAndRedeemGlp(_toToken, _amountIn, _amountOut, address(this));
+            _returnTo(_toToken, _amountOut, _to);
         }
+        uint256 diff = IERC20(toToken).balanceOf(_to) - toBalanceBefore;
+        require(diff >= _amountOut, "Insufficient amount-out");
+        emit YakAdapterSwap(_fromToken, toToken, _amountIn, _amountOut);
     }
 }
