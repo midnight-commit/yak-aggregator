@@ -116,8 +116,7 @@ contract GLPAdapter is YakAdapter {
             uint256 amount = IGmxRewardRouter(rewardRouter).mintAndStakeGlp(_fromToken, _amountIn, 0, _amountOut);
             _returnTo(sGLP, amount, _to);
         } else {
-            IGmxRewardRouter(rewardRouter).unstakeAndRedeemGlp(_toToken, _amountIn, _amountOut, address(this));
-            _returnTo(_toToken, _amountOut, _to);
+            IGmxRewardRouter(rewardRouter).unstakeAndRedeemGlp(_toToken, _amountIn, _amountOut, _to);
         }
         uint256 diff = IERC20(toToken).balanceOf(_to) - toBalanceBefore;
         require(diff >= _amountOut, "Insufficient amount-out");
