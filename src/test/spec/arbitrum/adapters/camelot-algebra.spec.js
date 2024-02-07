@@ -11,7 +11,7 @@ describe('YakAdapter - CamelotAlgebra', function() {
 
     before(async () => {
         const networkName = 'arbitrum'
-        const forkBlockNumber = 79470362
+        const forkBlockNumber = 178309015
         testEnv = await setTestEnv(networkName, forkBlockNumber)
         tkns = testEnv.supportedTkns
 

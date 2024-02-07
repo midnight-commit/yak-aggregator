@@ -322,34 +322,33 @@ contract YakRouter is Maintainable, Recoverable, IYakRouter {
         address _to,
         uint256 _fee
     ) internal returns (uint256) {
-        uint256[] memory amounts = new uint256[](_trade.path.length);
+        uint256 amountIn = _trade.amountIn;
         if (_fee > 0 || MIN_FEE > 0) {
             // Transfer fees to the claimer account and decrease initial amount
-            amounts[0] = _applyFee(_trade.amountIn, _fee);
-            _transferFrom(_trade.path[0], _from, FEE_CLAIMER, _trade.amountIn - amounts[0]);
-        } else {
-            amounts[0] = _trade.amountIn;
+            amountIn = _applyFee(_trade.amountIn, _fee);
+            _transferFrom(_trade.path[0], _from, FEE_CLAIMER, _trade.amountIn - amountIn);
         }
-        _transferFrom(_trade.path[0], _from, _trade.adapters[0], amounts[0]);
-        // Get amounts that will be swapped
-        for (uint256 i = 0; i < _trade.adapters.length; i++) {
-            amounts[i + 1] = IAdapter(_trade.adapters[i]).query(amounts[i], _trade.path[i], _trade.path[i + 1]);
-        }
-        require(amounts[amounts.length - 1] >= _trade.amountOut, "YakRouter: Insufficient output amount");
+        _transferFrom(_trade.path[0], _from, _trade.adapters[0], amountIn);
+
+        address tokenOut = _trade.path[_trade.path.length - 1];
+        uint256 balanceBefore = IERC20(tokenOut).balanceOf(_to);
         for (uint256 i = 0; i < _trade.adapters.length; i++) {
             // All adapters should transfer output token to the following target
             // All targets are the adapters, expect for the last swap where tokens are sent out
             address targetAddress = i < _trade.adapters.length - 1 ? _trade.adapters[i + 1] : _to;
             IAdapter(_trade.adapters[i]).swap(
-                amounts[i],
-                amounts[i + 1],
+                amountIn,
+                0,
                 _trade.path[i],
                 _trade.path[i + 1],
                 targetAddress
             );
+            amountIn = IERC20(_trade.path[i + 1]).balanceOf(targetAddress);
         }
-        emit YakSwap(_trade.path[0], _trade.path[_trade.path.length - 1], _trade.amountIn, amounts[amounts.length - 1]);
-        return amounts[amounts.length - 1];
+        uint256 amountOut = amountIn - balanceBefore;
+        require(amountOut >= _trade.amountOut, "YakRouter: Insufficient output amount");
+        emit YakSwap(_trade.path[0], tokenOut, _trade.amountIn, amountOut);
+        return amountOut;
     }
 
     function swapNoSplit(

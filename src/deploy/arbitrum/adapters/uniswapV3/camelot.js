@@ -6,7 +6,7 @@ const tags = [ 'camelot_algebra' ]
 const name = 'CamelotAlgebraAdapter'
 const contractName = 'AlgebraAdapter'
 
-const gasEstimate = 250_000
+const gasEstimate = 400_000
 const quoterGasLimit = gasEstimate
 const factory = camelot.algebraFactory
 const quoter = other.algebraQuoter
